@@ -1,0 +1,391 @@
+10.254.128.189
+
+docker commit <container_id> nlp_textsum_led
+
+docker save nlp_textsum_led > nlp_textsum_led.tar
+
+docker load < nlp_textsum_led.tar
+
+docker run --shm-size 200G --gpus=all -it --name nlp_textsum_led -v /home:/home nlp_textsum_led:latest
+
+docker run --gpus=all -it --name nlp_nmt6 -v /home:/home nlp_nmt4:latest
+
+kill $(ps aux | grep multiprocessing.spawn | grep -v grep | awk '{print $2}')
+
+
+CUDA_VISIBLE_DEVICES=5
+
+
+CUDA_VISIBLE_DEVICES=7 python predict_vi_en.py --input_path raw_data/en-vi/test.vi --output_path raw_data/en-vi-predict/test.en
+
+CUDA_VISIBLE_DEVICES=2 python predict_vi_zh.py --input_path raw_data/zh-vi/test.vi --output_path raw_data/zh-vi-predict/test.zh
+
+
+sacrebleu -tok '13a' -s 'exp' raw_data/en-vi/test.en < raw_data/en-vi-predict/test.en
+sacrebleu -tok '13a' -s 'exp' raw_data/zh-vi/test.zh < raw_data/zh-vi-predict/test.zh
+
+nohup bash experiments_zh/train_mbart_tpr_pascal.sh > log_train_mbart_tpr_pascal.txt &
+
+
+docker run --shm-size 200G --gpus=all -it --name nlp_textsum_led1 --pid=host -v /home:/home nlp_textsum_led:latest
+
+docker run --shm-size 200G --gpus=all -it --name nlp_textsum --pid=host -v /home:/home nlp_textsum_led:latest
+
+docker run --shm-size 200G --gpus=all -it --name nlp_textsum2 --pid=host -v /home:/home nlp_textsum_led:latest
+
+
+CUDA_VISIBLE_DEVICES=1 nohup script/primer_hf_main_test.py > log_hf_test.txt &
+
+export http_proxy=http://10.30.153.169:3128
+export https_proxy=http://10.30.153.169:3128
+
+
+nlp_textsum_led
+transformers 4.24.0
+
+nlp_textsum_led2
+transformers-3.1.0
+
+CUDA_VISIBLE_DEVICES=6,7 nohup python model/hgsum_simple.py > logs_train_simple.txt &
+
+
+docker run --gpus=all --shm-size 80G -it --name nlp_textsum_rs --network host --pid=host -v /data:/data hub.vtcc.vn:8989/nvidia/pytorch:23.06-py3
+docker run --gpus=all --shm-size 80G -it --name nlp_moe --network host --pid=host -v /data:/data hub.vtcc.vn:8989/nvidia/pytorch:25.04-py3
+docker run --gpus=all --shm-size 80G -it --name nlp_moe2 --network host --pid=host -v /data:/data hub.vtcc.vn:8989/nvidia/pytorch:25.04-py3
+
+
+rsync -avh --info=progress2 rsync://ductm18@10.254.138.189:9010/raid/models/LDSum_diff .
+rsync -avh --info=progress2 rsync://ductm18@10.254.138.189:9010/raid/models/mbart-large-50 .
+rsync -avh --info=progress2 rsync://ductm18@10.254.138.189:9010/raid/models/T5LLamaMoE.zip .
+rsync -avh --info=progress2 rsync://ductm18@10.254.138.189:9010/raid/models/models_rsync/modeling_llama_moe_upscaling_fla.py .
+
+rsync -avh --info=progress2 T5LLamaMoE rsync://ductm18@10.254.138.189:9010/raid/models/models_rsync/
+
+rsync -avh --info=progress2 rsync://ductm18@10.254.138.189:8110/raid/models/models_rsync/Llama-3.2.1B .
+
+
+
+CUDA_VISIBLE_DEVICES=0 python main_long.py
+
+export CUDA_VISIBLE_DEVICES=0,1,2,3 OMPI_ALLOW_RUN_AS_ROOT=1 OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1 && mpiexec -n 4  python main_long.py
+
+export CUDA_VISIBLE_DEVICES=0 OMPI_ALLOW_RUN_AS_ROOT=1 OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1 && mpiexec -n 1  python inference_main.py
+export CUDA_VISIBLE_DEVICES=0,1 OMPI_ALLOW_RUN_AS_ROOT=1 OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1 && mpiexec -n 2  python inference_main_mem.py
+
+pip install accelerate==0.29.3
+pip install transformers==4.39.2  => Llama3-8B
+
+pip install accelerate==0.34.2
+pip install transformers==4.45.0  => Llama3.2
+datasets==2.2.1
+
+
+python magicoder/convert_dense_to_moe.py --model /data/dungdx4/BERT/Llama-3.2-1B --save-path "Llama-3.2-1B-Moe"
+
+
+docker run --gpus all -idt --log-opt max-size=5g --net=host --shm-size=20G --ulimit memlock=-1 --ulimit stack=67108864 -e CUDA_VISIBLE_DEVICES="0,1,2,3" --name qwen3-32b -v /data/dungdx4/BERT/:/work -w /work hub.vtcc.vn:8989/vllm/vllm-openai:v0.9.2 --model Qwen3-32B --port 9002 --gpu-memory-utilization 0.90 --tensor-parallel-size=4 --disable-log-requests --max-model-len 16384
+
+docker run --gpus all -idt --log-opt max-size=5g --net=host --shm-size=20G --ulimit memlock=-1 --ulimit stack=67108864 -e CUDA_VISIBLE_DEVICES="2,3" --name erax -v /data/dungdx4/BERT/:/work -w /work hub.vtcc.vn:8989/vllm/vllm-openai:v0.9.2 --model EraX-Translator-V1.0 --port 9003 --gpu-memory-utilization 0.90 --tensor-parallel-size=2 --disable-log-requests --tokenizer EraX-Translator-V1.0
+
+docker run --gpus all -idt --log-opt max-size=5g --net=host --shm-size=20G --ulimit memlock=-1 --ulimit stack=67108864 -e CUDA_VISIBLE_DEVICES="1" --name nanonet-v /data/dungdx4/BERT/:/work -w /work hub.vtcc.vn:8989/vllm/vllm-openai:v0.9.2 --model Nanonets-OCR2-3B --port 9004 --gpu-memory-utilization 0.90 --tensor-parallel-size=1 --disable-log-requests
+
+
+docker run --gpus all -idt --log-opt max-size=5g --net=host --shm-size=20G --ulimit memlock=-1 --ulimit stack=67108864 -e CUDA_VISIBLE_DEVICES="0" --name erax -v /data/dungdx4/BERT/:/work -w /work hub.vtcc.vn:8989/vllm/vllm-openai:v0.9.2 --model EraX-Translator-V1.0 --port 9004 --gpu-memory-utilization 0.95 --tensor-parallel-size=1 --disable-log-requests --tokenizer EraX-Translator-V1.0
+docker run --gpus all -idt --log-opt max-size=5g --net=host --shm-size=20G --ulimit memlock=-1 --ulimit stack=67108864 -e CUDA_VISIBLE_DEVICES="1" --name erax2 -v /data/dungdx4/BERT/:/work -w /work hub.vtcc.vn:8989/vllm/vllm-openai:v0.9.2 --model EraX-Translator-V1.0 --port 9005 --gpu-memory-utilization 0.95 --tensor-parallel-size=1 --disable-log-requests --tokenizer EraX-Translator-V1.0
+docker run --gpus all -idt --log-opt max-size=5g --net=host --shm-size=20G --ulimit memlock=-1 --ulimit stack=67108864 -e CUDA_VISIBLE_DEVICES="2" --name erax3 -v /data/dungdx4/BERT/:/work -w /work hub.vtcc.vn:8989/vllm/vllm-openai:v0.9.2 --model EraX-Translator-V1.0 --port 9006 --gpu-memory-utilization 0.95 --tensor-parallel-size=1 --disable-log-requests --tokenizer EraX-Translator-V1.0
+docker run --gpus all -idt --log-opt max-size=5g --net=host --shm-size=20G --ulimit memlock=-1 --ulimit stack=67108864 -e CUDA_VISIBLE_DEVICES="3" --name erax4 -v /data/dungdx4/BERT/:/work -w /work hub.vtcc.vn:8989/vllm/vllm-openai:v0.9.2 --model EraX-Translator-V1.0 --port 9007 --gpu-memory-utilization 0.95 --tensor-parallel-size=1 --disable-log-requests --tokenizer EraX-Translator-V1.0
+
+
+================================================================
+
+/lustre-data-vai/nlp$ cd susi/k8s/
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/susi/k8s$ ls
+lm-eval-pod.yml  susi-pod.yaml  susi-pvc.yaml  susi-pv.yaml
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/susi/k8s$ vi susi-pod.yaml 
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/susi/k8s$ vi susi-pvc.yaml 
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/susi/k8s$ k apply -f susi-pv
+
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/susi/k8s$ k apply -f susi-pvc.yaml ^C
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/susi/k8s$ cd ../..
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp$ mkdir dungdx4
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp$ cd dungdx4/
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/dungdx4$ cp ../susi/k8s/* ./
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/dungdx4$ ls
+lm-eval-pod.yml  susi-pod.yaml  susi-pvc.yaml  susi-pv.yaml
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/dungdx4$ mv susi-pvc.yaml dungdx4-pvc.yaml
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/dungdx4$ vi dungdx4-pvc.yaml 
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/dungdx4$ k apply -f dungdx4-pvc.yaml 
+persistentvolumeclaim/dungdx4-pvc created
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/dungdx4$ k get pvc
+
+persistentvolumeclaim/dungdx4-pvc created
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/dungdx4$ k get pvc
+NAME                        STATUS   VOLUME                                         CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+data-proc                   Bound    pvc-exa-417ec427-b7a3-45ac-bda7-878cb46f38cd   100Gi      RWX            exa-vai-sc     <unset>                 34d
+dungdx4-pvc                 Bound    pvc-exa-f82d6f15-6108-49f9-bf1c-3af5595cade4   800Gi      RWX            exa-vai-sc     <unset>                 16s
+exa-vai-pvc-test            Bound    pvc-exa-bfc1beca-75fe-4815-b32f-94eb19a5f028   13Gi       RWX            exa-vai-sc     <unset>                 29d
+face-nist-pvc               Bound    pvc-exa-ef8d8808-9321-46ce-ad29-bd296e47073b   1Ti        RWX            exa-vai-sc     <unset>                 49d
+gpt-oss-20b-pvc             Bound    pvc-exa-daefebe8-d121-4395-8511-4f68f30a1e5f   100Gi      RWX            exa-vai-sc     <unset>                 22d
+imagen-pvc                  Bound    pvc-exa-08936025-fc61-4ea8-b590-e4351e178d36   400Gi      RWX            exa-vai-sc     <unset>                 29d
+llama-3-70b-fp8-pvc         Bound    pvc-exa-c5456f0f-263e-43d2-9392-bf0c92c0fea0   100Gi      RWX            exa-vai-sc     <unset>                 29d
+llama-3-70b-sd-pvc          Bound    pvc-exa-30da33f5-a3bd-4895-aad8-4ae32b2349fa   200Gi      RWX            exa-vai-sc     <unset>                 29d
+llama-3-8b-fp8-pvc          Bound    pvc-exa-ece28e58-ddfb-414a-a37c-92ce45eade6a   50Gi       RWX            exa-vai-sc     <unset>                 21d
+llama-3-8b-pvc              Bound    pvc-exa-9909ae33-a419-4c69-8690-49e748ff4214   50Gi       RWX            exa-vai-sc     <unset>                 21d
+llama-4-maverick-pvc        Bound    pvc-exa-e44b5b46-b1c9-4ef8-a813-2ec0873c165f   1Ti        RWX            exa-vai-sc     <unset>                 22d
+minimax-m2-fp8-pvc          Bound    pvc-exa-21ea97e5-20dd-4f9f-95d3-b83f0473fac5   300Gi      RWX            exa-vai-sc     <unset>                 14d
+qwen3-next-80b-fp8-pvc-02   Bound    pvc-exa-64284e2e-40d7-4ea4-9def-9dd5f1082b84   100Gi      RWX            exa-vai-sc     <unset>                 29d
+susi-pvc                    Bound    pvc-exa-ad59880d-254e-48a2-b1a6-a7ee666339b2   800Gi      RWX            exa-vai-sc     <unset>                 13d
+vllm-pvc                    Bound    pvc-exa-f6167655-854f-4325-a57d-8ea4d1244bad   100Gi      RWX            exa-vai-sc     <unset>                 49d
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/dungdx4$ mv susi-pod.yaml dungdx4-pod.yaml
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/dungdx4$ vi dungdx4-pod.yaml 
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/dungdx4$ k apply -f dungdx4-pod.yaml 
+Error from server (Forbidden): error when creating "dungdx4-pod.yaml": pods "dungdx4-pod" is forbidden: exceeded quota: vtai-quota, requested: requests.nvidia.com/gpu=2, used: requests.nvidia.com/gpu=32, limited: requests.nvidia.com/gpu=32
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/dungdx4$ k get pods
+NAME                                     READY   STATUS    RESTARTS   AGE
+bm-gpt-oss-120b-fp8-5cb995778d-2tbv2     1/1     Running   0          24h
+bm1-gpt-oss-120b-fp8-6ddbf5f74f-lrp8v    1/1     Running   0          24h
+face-nist-train-arcface-jhmj8            1/1     Running   0          10h
+llm-gpt-oss-120b-5c5bb777f8-fswws        1/1     Running   0          24h
+llm-gpt-oss-120b-fp8-84959566b9-t7kdr    1/1     Running   0          24h
+llm-gpt-oss-20b-59dcf595f9-rzr7k         1/1     Running   0          24h
+llm-gpt-oss-20b-fp8-556bc4ccd-rp7gx      1/1     Running   0          24h
+llm-llama-3-70b-5b78847d57-mpqwv         1/1     Running   0          24h
+llm-llama-3-70b-fp8-56f8889965-8tbld     1/1     Running   0          24h
+llm-minimax-m2-fp8-f7bd755d8-fztbc       1/1     Running   0          24h
+llm-qwen3-next-80b-fp8-bb985898c-75mj7   1/1     Running   0          24h
+lm-eval-pod                              1/1     Running   0          5h6m
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/dungdx4$ k exec -ti lm-eval-pod -- bash
+
+
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/dungdx4$ cd /lustre-data-vai/kubernetes/volumes/pvc-exa-f82d6f15-6108-49f9-bf1c-3af5595cade4-projectId-234188562/
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/kubernetes/volumes/pvc-exa-f82d6f15-6108-49f9-bf1c-3af5595cade4-projectId-234188562$
+
+
+
+cd /lustre-data-vai/nlp/dungdx4
+
+cd /lustre-data-vai/kubernetes/volumes/pvc-exa-f82d6f15-6108-49f9-bf1c-3af5595cade4-projectId-234188562/
+
+
+
+rsync -avh --info=progress2 rsync://ductm18@10.254.138.189:8110/raid/models/models_rsync/nlp_textsum_rs.tar .
+
+rsync -avh --info=progress2 rsync://ductm18@10.254.138.189:8110/raid/models/models_rsync/T5LLamaMoE-v2/llamate/modeling_llama_seq2seq.py .
+
+rsync -avh --info=progress2 rsync://ductm18@10.254.138.189:8110/raid/models/models_rsync/MDSum_diff_v2 .
+
+
+rsync -avh --info=progress2 checkpoints/ rsync://ductm18@10.254.138.189:8110/raid/models/models_rsync/nemo_saved/
+
+
+docker image tag nlp_moe_nemo2:0.1 hla9103p2-dl360-gpu-hnode01.cm.cluster:5000/dungdx4/nlp_moe_nemo2:0.1
+docker push hla9103p2-dl360-gpu-hnode01.cm.cluster:5000/dungdx4/nlp_moe_nemo2:0.1
+
+docker image tag nlp_textsum_diff:0.1 hla9103p2-dl360-gpu-hnode01.cm.cluster:5000/dungdx4/nlp_textsum_diff:0.1
+docker push hla9103p2-dl360-gpu-hnode01.cm.cluster:5000/dungdx4/nlp_textsum_diff:0.1
+
+
+hla9103p2-dl360-gpu-hnode01.cm.cluster:5000/dungdx4/nlp_textsum:0.1
+hla9103p2-dl360-gpu-hnode01.cm.cluster:5000/dungdx4/nlp_fla:0.1
+hla9103p2-dl360-gpu-hnode01.cm.cluster:5000/dungdx4/nlp_textsum_rs:0.1
+
+k get pods --watch
+
+
+k apply -f dungdx4-pod.yaml 
+
+k apply -f dungdx4-pod-rs.yaml 
+
+
+
+k exec -ti dungdx4-pod -- bash
+
+k exec -ti dungdx4-pod-rs -- bash
+
+
+
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/dungdx4$ vi dungdx4-pod.yaml 
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/dungdx4$ k apply -f dungdx4-pod.yaml 
+pod/dungdx4-pod created
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/dungdx4$ k get pods
+NAME                                    READY   STATUS              RESTARTS   AGE
+bm-gpt-oss-120b-fp8-5cb995778d-2tbv2    1/1     Running             0          2d1h
+bm1-gpt-oss-120b-fp8-6ddbf5f74f-lrp8v   1/1     Running             0          2d1h
+dungdx4-pod                             0/1     ContainerCreating   0          4s
+face-nist-train-arcface-jhmj8           1/1     Running             0          34h
+llm-gpt-oss-120b-5c5bb777f8-6k7g8       1/1     Running             0          4h19m
+llm-gpt-oss-120b-fp8-84959566b9-t7kdr   1/1     Running             0          2d1h
+llm-gpt-oss-20b-59dcf595f9-rzr7k        1/1     Running             0          2d1h
+llm-gpt-oss-20b-fp8-556bc4ccd-rp7gx     1/1     Running             0          2d1h
+llm-llama-3-70b-5b78847d57-mpqwv        1/1     Running             0          2d1h
+llm-llama-3-70b-fp8-56f8889965-6khwr    1/1     Running             0          4h19m
+llm-minimax-m2-fp8-f7bd755d8-snhp7      1/1     Running             0          4h16m
+lm-eval-pod                             1/1     Running             0          9h
+os_vtai@HLA9103P2-R660XS-GPU-LNODE01:/lustre-data-vai/nlp/dungdx4$ k exec -ti dungdx4-pod -- bash
+
+k delete pod dungdx4-pod
+
+k describe pod dungdx4-pod
+
+============================
+
+10.221.122.130
+10.29.95.16
+
+============================
+mkdir /workspace/.triton_cache
+
+
+export TRITON_CACHE_DIR=/workspace/.triton_cache
+
+
+export TORCHINDUCTOR_DISABLE=1
+export USER=dung
+export LOGNAME=dung
+export TORCHINDUCTOR_CACHE_DIR=/workspace/.torchinductor
+
+
+export HF_HOME=/workspace/.hf
+export HF_DATASETS_CACHE=/workspace/.hf/datasets
+export TRANSFORMERS_CACHE=/workspace/.hf/transformers
+export XDG_CACHE_HOME=/workspace/.cache
+
+
+export CUDA_VISIBLE_DEVICES=0 OMPI_ALLOW_RUN_AS_ROOT=1 OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1 && mpiexec -n 1  python main.py
+export CUDA_VISIBLE_DEVICES=0,1 OMPI_ALLOW_RUN_AS_ROOT=1 OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1 && mpiexec -n 2  python main.py
+
+============================
+
+cd /lustre-data-vai/kubernetes/volumes/pvc-exa-fd038002-c9e2-4f4d-84b2-ee15d999aa52-projectId-677458413
+
+
+export HF_HOME=/workspace/hf_cache
+export TRANSFORMERS_CACHE=/workspace/hf_cache
+export HUGGINGFACE_HUBCACHE=/workspace/hf_cache
+export MPLCONFIGDIR=/workspace/mpl_cache
+
+
+export HOME=/workspace
+export XDG_CACHE_HOME=/workspace/.cache
+export XDG_CONFIG_HOME=/workspace/.config
+
+
+mkdir -p /workspace/hf_cache
+mkdir -p /workspace/mpl_cache
+
+mkdir -p /workspace/ckpts/
+chmod -R 777 /workspace/ckpts/
+
+
+mkdir -p /workspace/nemo_run/
+chmod -R 777 /workspace/nemo_run/
+
+
+============================
+
+drwxr-sr-x  2 root 1001 4096 Nov 20 03:35 book_all.0000.parquet/
+drwxr-sr-x  2 root 1001 4096 Nov 27 09:24 book_education.0000.parquet/
+drwxr-sr-x  2 root 1001 4096 Nov 27 14:09 book_law.0000.parquet/
+drwxr-sr-x  2 root 1001 4096 Nov 27 21:32 book_medical.0000.parquet/
+book_history
+book_finance
+science
+book_math
+book_textbook
+biographies_of_characters
+novel
+
+============================
+v1:
+train_stage
+per_device_train_batch_size 3
+
+
+nohup bash test_nemo2.sh > run_train.txt &
+
+tail -f run_train.txt
+
+
+NEMORUN_HOME=/workspace/nemo_restore/nemo_run
+
+NEMO_HOME=/workspace/nemo_restore/nemo
+
+
+/workspace/nemo_restore/finetuning_nemo2_info/qwen3_14b_lora_120525-16h_globalBatch-8_seqLength-8192/checkpoints
+
+
+/workspace/nemo_restore/finetuning_nemo2_info/gptoss_20b
+
+
+============================
+
+cd /workspace/SDAR-main/training/llama_factory_sdar
+
+torchrun --nnodes 1 --node_rank 0 --nproc_per_node 2 --master_addr 127.0.0.1 --master_port 12345 src/llamafactory/launcher.py examples/train_full_sdar/sdar_4b/sdar_4b_math_cot_full.yaml
+
+============================
+python process_erax_json4.py
+
+docker run --privileged --user root --name hunyuanLLM_infer --rm -it --ipc=host --ulimit stack=67108864 --gpus=2 -v /data/dungdx4/:/data/dungdx4 hunyuaninfer/hunyuan-7b:hunyuan-7b-trtllm
+
+cat > extra-llm-api-config.yml <<EOF
+use_cuda_graph: true
+cuda_graph_padding_enabled: true
+cuda_graph_batch_sizes:
+- 1
+- 2
+- 8
+- 16
+- 32
+print_iter_log: true
+EOF
+
+trtllm-serve /data/dungdx4/BERT/Hunyuan-MT-7B --host localhost --port 9004 --backend pytorch --max_batch_size 32 --max_num_tokens 16384 --tp_size 2 --kv_cache_free_gpu_memory_fraction 0.6 --trust_remote_code --extra_llm_api_options extra-llm-api-config.yml
+
+============================
+
+convert_hf_nemo2.sh
+
+bash test_qwen3_4b.sh
+pretrain llama 3.2 - 1b: bash  pretrain_llama32_3b.sh
+checkpoints finetune qwen3_4b after continual learning: finetuning_nemo2_info/qwen3_4b_lora_010526-11h_globalBatch-8_seqLength-16384/checkpoints/model_name\=0--val_loss\=0.89-step\=24099-consumed_samples\=192800.0/
+Code to pretrain Llama3.2-1B and Llama3.2-3B:
+
+nohup bash pretrain_llama32_3b.sh > pretrain_llama32_3b_rerun_log.txt &
+bash pretrain_llama32_1b.sh
+nohup bash pretrain_llama32_1b.sh > pretrain_llama32_1b_rerun_log2.txt &
+
+============================
+cd /lustre-data-vai/kubernetes/volumes/pvc-exa-f471d7a0-f911-49c9-a873-8da49705f004-projectId-3613590552/
+
+Checkpoints for pretraining/continual learning: pretraining_nemo2_info
+Checkpoints for finetuning: finetuning_nemo2_info
+
+============================
+
+dungdx4-pod-rs
+dungdx4-pod-rs-1: 2gpu
+
+dungdx4-pod-nemo-oss1
+
+
+============================
+
+
+nohup bash finetune_qwen3_8b.sh > finetune_qwen3_8b_log.txt &
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
