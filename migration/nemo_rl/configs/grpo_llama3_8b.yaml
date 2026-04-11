@@ -1,0 +1,161 @@
+# GRPO Config — Post-training RL for Llama-3-8B (new capability vs NeMo 2)
+#
+# Typical workflow:
+#   1. finetune.py (SFT warm-start)  →  2. run_grpo.py (RL alignment)
+#
+# Recommended GPU setup: 8 GPUs minimum (4 for policy, 4 for vLLM generation)
+
+grpo:
+  num_prompts_per_step: 64       # batch of prompts per RL step
+  num_generations_per_prompt: 16  # how many completions to sample per prompt
+  normalize_rewards: true
+  leave_one_out_baseline: false   # set true for REINFORCE leave-one-out
+
+  # PPO-clip hyperparams
+  epsilon: 0.2                    # clip ratio
+  beta: 0.001                     # KL penalty coefficient
+
+  max_steps: 10000
+  val_period: 100
+  val_batches: 4
+  seed: 42
+
+  # Async GRPO (off-policy, requires replay buffer)
+  # Not compatible with: dynamic_sampling, reward_scaling, reward_shaping
+  async_grpo:
+    enabled: false
+    max_trajectory_age_steps: 1
+
+checkpointing:
+  enabled: true
+  checkpoint_dir: "experiments/grpo_nemo_rl/llama3_8b"
+  metric_name: "train:reward_mean"
+  higher_is_better: true
+  keep_top_k: 3
+  save_period: 500
+  save_optimizer: true
+
+policy:
+  # Model must be instruction-tuned (SFT) before GRPO
+  model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
+
+  tokenizer:
+    name: ${policy.model_name}
+    chat_template_kwargs: null
+
+  train_global_batch_size: 512
+  train_micro_batch_size: 1
+  logprob_batch_size: 2
+  generation_batch_size: 32
+  max_total_sequence_length: 4096
+  precision: "bfloat16"
+
+  # Reference policy for KL computation (frozen copy of initial model)
+  draft:
+    enabled: false
+
+  dtensor_cfg:
+    _v2: true
+    enabled: true
+    tensor_parallel_size: 1
+    context_parallel_size: 1
+    sequence_parallel: false
+    activation_checkpointing: false
+    lora_cfg:
+      enabled: false
+
+  max_grad_norm: 1.0
+
+  optimizer:
+    name: "torch.optim.AdamW"
+    kwargs:
+      lr: 3.0e-7
+      weight_decay: 0.01
+      betas: [0.9, 0.999]
+      eps: 1.0e-8
+      foreach: false
+      fused: false
+
+  scheduler:
+    - name: "torch.optim.lr_scheduler.LinearLR"
+      kwargs:
+        start_factor: 0.1
+        end_factor: 1.0
+        total_iters: 10   # warmup steps
+    - name: "torch.optim.lr_scheduler.ConstantLR"
+      kwargs:
+        factor: 1.0
+        total_iters: 1000000000
+    - milestones: [10]
+
+  # Generation backend for sampling completions
+  generation:
+    backend: "vllm"               # "vllm" (fast) or "hf" (simple)
+    max_new_tokens: ${policy.max_total_sequence_length}
+    temperature: 1.0
+    top_p: 1.0
+    top_k: null
+    stop_token_ids: null
+    stop_strings: null
+    vllm_cfg:
+      tensor_parallel_size: 1
+      gpu_memory_utilization: 0.6  # leave headroom for policy training
+      max_model_len: ${policy.max_total_sequence_length}
+      enforce_eager: false
+
+  # Megatron backend (alternative to dtensor, better for >8B with PP)
+  megatron_cfg:
+    enabled: false
+    tensor_model_parallel_size: 1
+    pipeline_model_parallel_size: 1
+    sequence_parallel: false
+    activation_checkpointing: false
+
+# Reward environments — determines task reward signal
+# "math": exact match verifier for math problems (free, no external call)
+# "lm_judge": LM-as-judge (requires judge model)
+# See nemo-rl/nemo_rl/envs/ for all environments
+env:
+  math:
+    name: "math"
+    timeout: 10
+
+data:
+  max_input_seq_length: ${policy.max_total_sequence_length}
+  add_bos: true
+  add_eos: false
+  add_generation_prompt: true    # true for chat-formatted prompts
+  shuffle: true
+  use_multiple_dataloader: false
+
+  train:
+    # Built-in math dataset; or use data_path for custom JSONL
+    dataset_name: "OpenMathInstruct-2"
+    input_key: "problem"
+    env_name: "math"
+    task_name: "math_train"
+
+  validation:
+    dataset_name: "OpenMathInstruct-2"
+    split: "validation"
+    input_key: "problem"
+    env_name: "math"
+    task_name: "math_val"
+
+  default:
+    processor: "response_processor"
+
+logger:
+  log_dir: "logs/grpo_llama3_8b"
+  wandb_enabled: false
+  tensorboard_enabled: true
+  monitor_gpus: true
+  tensorboard:
+    log_dir: "tb_logs/grpo_llama3_8b"
+  gpu_monitoring:
+    collection_interval: 10
+    flush_interval: 10
+
+cluster:
+  gpus_per_node: 8   # GRPO needs more GPUs: policy training + vLLM generation
+  num_nodes: 1

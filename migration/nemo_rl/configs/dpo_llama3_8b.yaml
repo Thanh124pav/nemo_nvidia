@@ -1,0 +1,127 @@
+# DPO Config — Preference alignment for Llama-3-8B (new capability vs NeMo 2)
+#
+# DPO trains on preference pairs (chosen vs rejected) to align model behavior.
+# No reward model or RL training loop needed.
+#
+# Typical workflow:
+#   1. finetune.py or run_sft.py  →  2. run_dpo.py (alignment)
+#
+# Data format (BinaryPreferenceDataset):
+#   {"prompt": "...", "chosen": "good response", "rejected": "bad response"}
+#
+# Or PreferenceDataset (multi-turn with rank):
+#   {"messages": [
+#     {"role": "user",      "content": "..."},
+#     {"role": "assistant", "content": "chosen response", "rank": 0},
+#     {"role": "assistant", "content": "rejected response", "rank": 1}
+#   ]}
+
+dpo:
+  max_num_epochs: 1
+  max_num_steps: 5000
+
+  val_period: 250
+  val_batches: 8
+  val_global_batch_size: 8
+  val_micro_batch_size: 1
+  val_at_start: true
+  val_at_end: false
+  seed: 42
+
+  # DPO loss weights
+  reference_policy_kl_penalty: 0.05    # β in DPO loss (higher → stay close to ref)
+  preference_loss_weight: 1.0
+  sft_loss_weight: 0.0                  # set > 0 to add SFT regularization
+
+  preference_average_log_probs: false
+  sft_average_log_probs: ${.preference_average_log_probs}
+
+checkpointing:
+  enabled: true
+  checkpoint_dir: "experiments/dpo_nemo_rl/llama3_8b"
+  metric_name: "val:validation-default_loss"
+  higher_is_better: false
+  keep_top_k: 3
+  save_period: 1000
+  checkpoint_must_save_by: null
+  save_optimizer: true
+
+policy:
+  model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
+
+  tokenizer:
+    name: ${policy.model_name}
+    chat_template_kwargs: null
+
+  # DPO processes pairs: actual batch size = train_global_batch_size * 2
+  train_global_batch_size: 64
+  train_micro_batch_size: 1
+  max_total_sequence_length: 2048
+  precision: "bfloat16"
+
+  offload_optimizer_for_logprob: false
+
+  dtensor_cfg:
+    _v2: true
+    enabled: true
+    env_vars:
+      PYTORCH_CUDA_ALLOC_CONF: ""
+    cpu_offload: false
+    sequence_parallel: false
+    activation_checkpointing: false
+    tensor_parallel_size: 1
+    context_parallel_size: 1
+    lora_cfg:
+      enabled: false
+
+  max_grad_norm: 1.0
+
+  optimizer:
+    name: "torch.optim.AdamW"
+    kwargs:
+      lr: 5.0e-7                  # DPO uses lower LR than SFT
+      weight_decay: 0.01
+      betas: [0.9, 0.999]
+      eps: 1.0e-8
+      foreach: false
+      fused: false
+
+  megatron_cfg:
+    enabled: false
+
+data:
+  max_input_seq_length: ${policy.max_total_sequence_length}
+  add_bos: true
+  add_eos: true
+  add_generation_prompt: false
+
+  # Use HelpSteer3 or custom preference data
+  train:
+    # Option A: built-in dataset
+    dataset_name: "HelpSteer3"
+
+    # Option B: custom JSONL (uncomment and adjust)
+    # data_path: "datasets/preference_data/train.jsonl"
+    # processor: "binary_preference_processor"  # for {prompt, chosen, rejected} format
+
+  validation:
+    dataset_name: "HelpSteer3"
+    split: "validation"
+
+  default:
+    processor: "preference_processor"
+
+logger:
+  log_dir: "logs/dpo_llama3_8b"
+  wandb_enabled: false
+  tensorboard_enabled: true
+  monitor_gpus: true
+  tensorboard:
+    log_dir: "tb_logs/dpo_llama3_8b"
+  gpu_monitoring:
+    collection_interval: 10
+    flush_interval: 10
+
+cluster:
+  gpus_per_node: 2
+  num_nodes: 1
