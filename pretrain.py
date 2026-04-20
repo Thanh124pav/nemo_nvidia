@@ -46,6 +46,8 @@ def get_args():
                         help="path to .nemo file of the pretrained model")
     parser.add_argument("--resume-from-path", type=str, default=None,
                         help="path to a specific checkpoint to resume from (weights only, no optimizer)")
+    parser.add_argument("--no-load-optim", action="store_true", default=False,
+                        help="skip loading optimizer state from checkpoint (use when optimizer format is incompatible)")
     parser.add_argument("--data-path", type=str, nargs = "+",
                         help="path to raw data for preprocessing")
     parser.add_argument("--dataset-root", type=str, required=True, nargs = '+',
@@ -150,6 +152,7 @@ def configure_recipe(args, nodes: int = 1):
     recipe.optim.lr_scheduler.warmup_steps = args.warmup_steps     # warmup steps
     recipe.optim.lr_scheduler.min_lr = 1e-6     
     recipe.trainer.strategy.ckpt_load_strictness = False
+    recipe.trainer.strategy.ckpt_load_optimizer = not args.no_load_optim
     recipe.trainer.devices = gpus_per_node
     recipe.model.config.seq_length = args.seq_length
     recipe.trainer.log_every_n_steps = args.log_every_n_steps
