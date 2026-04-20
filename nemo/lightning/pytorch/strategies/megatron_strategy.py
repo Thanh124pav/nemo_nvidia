@@ -1294,6 +1294,16 @@ class MegatronStrategy(DDPStrategy, io.IOMixin):
 
         optimizer_states = checkpoint["optimizer"]
         for optimizer, opt_state in zip(self.optimizers, optimizer_states):
+            if isinstance(opt_state, dict) and 'param_state_sharding_type' in opt_state:
+                # dp_reshardable format: optimizer state already loaded in-place
+                # during sharded checkpoint loading, skip load_state_dict
+                logging.info(
+                    f"Detected dp_reshardable optimizer format (param_state_sharding_type="
+                    f"{opt_state.get('param_state_sharding_type')}). "
+                    "Optimizer state loaded in-place, skipping load_state_dict."
+                )
+                _optimizer_to_device(optimizer, self.root_device)
+                continue
             if self._fsdp is not None:
                 opt_state['fp32_from_fp16_params'] = OrderedDict()
                 for opt_param in opt_state['optimizer']['state'].values():
