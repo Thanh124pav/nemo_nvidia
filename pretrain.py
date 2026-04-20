@@ -164,6 +164,7 @@ def configure_recipe(args, nodes: int = 1):
     # if model_id == "llama32_1b":
     #     recipe.trainer.strategy.ckpt_load_optimizer = False 
     recipe.log.ckpt.train_time_interval = run.Config(timedelta, minutes=7*24*60)
+    recipe.log.ckpt.every_n_epochs = None
     recipe.log.ckpt.save_top_k = 3
     recipe.log.ckpt.every_n_train_steps = args.val_check_interval
     
