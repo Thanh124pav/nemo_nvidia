@@ -44,6 +44,8 @@ def get_args():
     
     parser.add_argument("--model-path", type=str, required=True,
                         help="path to .nemo file of the pretrained model")
+    parser.add_argument("--resume-from-path", type=str, default=None,
+                        help="path to a specific checkpoint to resume from (weights only, no optimizer)")
     parser.add_argument("--data-path", type=str, nargs = "+",
                         help="path to raw data for preprocessing")
     parser.add_argument("--dataset-root", type=str, required=True, nargs = '+',
@@ -169,14 +171,25 @@ def configure_recipe(args, nodes: int = 1):
     recipe.log.ckpt.every_n_train_steps = args.val_check_interval
     
     
-    recipe.resume = run.Config(
-        nl.AutoResume, 
-        restore_config = run.Config(
-            nl.RestoreConfig, 
-            path=model_path
-        ), 
-        resume_if_exists=True,
-    )
+    if args.resume_from_path:
+        recipe.resume = run.Config(
+            nl.AutoResume,
+            restore_config=run.Config(
+                nl.RestoreConfig,
+                path=args.resume_from_path,
+                load_optim_state=False,
+            ),
+            resume_if_exists=False,
+        )
+    else:
+        recipe.resume = run.Config(
+            nl.AutoResume,
+            restore_config=run.Config(
+                nl.RestoreConfig,
+                path=model_path
+            ),
+            resume_if_exists=True,
+        )
 
     suffix = args.suffix
 #     new_paths = [data_path + suffix] if type(data_path) == str else data_path
