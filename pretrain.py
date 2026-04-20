@@ -3,6 +3,7 @@ from nemo.collections import llm
 from nemo import lightning as nl
 from nemo.collections.common.tokenizers.huggingface.auto_tokenizer import AutoTokenizer
 import argparse
+from datetime import timedelta
 from nemo.collections.nlp.parts.nlp_overrides import NLPSaveRestoreConnector
 import subprocess
 '''Example
@@ -162,7 +163,7 @@ def configure_recipe(args, nodes: int = 1):
     recipe.trainer.strategy.tensor_model_parallel_size = args.tensor_parallel
     # if model_id == "llama32_1b":
     #     recipe.trainer.strategy.ckpt_load_optimizer = False 
-    recipe.log.ckpt.train_time_interval = None
+    recipe.log.ckpt.train_time_interval = run.Config(timedelta, minutes=7*24*60)
     recipe.log.ckpt.save_top_k = 3
     recipe.log.ckpt.every_n_train_steps = args.val_check_interval
     
