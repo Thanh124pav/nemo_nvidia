@@ -231,7 +231,8 @@ def local_executor_torchrun(nodes: int = 1, devices: int = 2) -> run.LocalExecut
         "NCCL_NVLS_ENABLE": "0",
         "NVTE_DP_AMAX_REDUCE_INTERVAL": "0",
         "NVTE_ASYNC_AMAX_REDUCTION": "1",
-        "PYTORCH_CUDA_ALLOC_CONF": "max_split_size_mb:256",
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+        "NCCL_CUMEM_ENABLE": "0",
         "CUDA_LAUNCH_BLOCKING": "0", 
         "TORCH_CUDA_EMPTY_CACHE": "1",
     }
